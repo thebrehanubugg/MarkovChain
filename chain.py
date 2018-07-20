@@ -1,18 +1,13 @@
 """Markov Chain Generator."""
 import random
 
-CORPUS = [
-	"only she told him that she loved him",
-	"she only told him that she loved him",
-	"she told only him that she loved him",
-	"she told him only that she loved him",
-	"she told him that only she loved him",
-	"she told him that she only loved him",
-	"she told him that she loved only him",
-	"she told him that she loved him only"
-]
-
+CORPUS_PATH = ["HarryPotterCorpus.txt"]
 MARKOV_TREE = {}
+
+F = open("data/" + CORPUS_PATH[0])
+CORPUS = F.read()
+F.close()
+
 
 def add_to_tree(word, consequent):
 	"""Adds word and consequent to Markov Tree."""
@@ -24,6 +19,7 @@ def add_to_tree(word, consequent):
 	else:
 		MARKOV_TREE[word] = {}
 		MARKOV_TREE[word][consequent] = 1
+
 
 def digest_corpus(corpus_):
 	"""Feeds corpus through add_to_tree()."""
@@ -39,44 +35,46 @@ def digest_corpus(corpus_):
 			current, next_word = broken[word], broken[word + 1]
 			add_to_tree(current, next_word)
 
-def generate_probabilities(corpus_):
-	for key, value in corpus_.items():
+
+def generate_probabilities(old_tree):
+	"""Takes the count of each word and changes it to percentages."""
+	for key, value in old_tree.items():
 		total_sum = sum(list(value.values()))
 		for inner_key, inner_value in value.items():
 			new_inner_value = inner_value / total_sum
-			corpus_[key][inner_key] = new_inner_value
+			old_tree[key][inner_key] = new_inner_value
 
-	MARKOV_TREE = corpus_
+	MARKOV_TREE = old_tree
 
-def is_closest_to(dictionary, value):
-	keys = list(dictionary.keys())
-	values = list(dictionary.values())
-	subtracted_values = []
-	for val in values:
-		subtracted_values.append(abs(value - val))
-
-	selected_index = subtracted_values.index(min(subtracted_values))
-	return keys[selected_index]
 
 def choose_words(n, markov_tree):
 	"""Markov Generator."""
-	sentence = ""
+	generated_corpus = ""
 
-	for i in range(n):
-		random_index = random.choice(list(markov_tree.keys()))
-		random_number = random.random()
-		selected_word = is_closest_to(markov_tree[random_index], random_number)
-		sentence += selected_word
-		sentence += " "
+	possibilities = list(markov_tree)
+	chosen_word = random.choice(possibilities)
+	inner_possibilities = list(markov_tree[chosen_word])
+	chosen_inner_word = random.choice(inner_possibilities)
+	generated_corpus += chosen_word + " " + chosen_inner_word + " "
 
-	print(sentence)
+	for n in range(n):
+		last_word = generated_corpus.split(" ")[-2]
+		n_inner_possibilities = list(markov_tree[last_word])
+		n_inner_word = random.choice(n_inner_possibilities)
+		generated_corpus += n_inner_word + " "
+
+	output_file = open("output.txt", "w")
+	output_file.write(generated_corpus)
+	output_file.close()
+
+	print("~~ Wrote", len(generated_corpus), "words to disk")
 
 
 def markov_init(corpus_, markov_tree):
 	"""Combining process into one function."""
 	digest_corpus(corpus_)
 	generate_probabilities(markov_tree)
-	choose_words(10, markov_tree)
+	choose_words(400, markov_tree)
 
+# Initializing & Running Markov Chain.
 markov_init(CORPUS, MARKOV_TREE)
-# print(MARKOV_TREE)
